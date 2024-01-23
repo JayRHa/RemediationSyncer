@@ -39,86 +39,43 @@ Connect-MgGraph -tenantid f849cde7-f11d-4ef5-a31d-7fca98b21bf5
 ###############################################################################################################
 # Functions ###################################################################################################
 ###############################################################################################################
+$graphApiVersion = "Beta"
+$graphUrl = "https://graph.microsoft.com/$graphApiVersion"
+
 function Get-IntuneRemediationScripts {
-    $graphApiVersion = "Beta"
-    $graphUrl = "https://graph.microsoft.com/$graphApiVersion"
     $remediationScripts = Invoke-MGGraphRequest -Uri "$graphUrl/deviceManagement/deviceHealthScripts" -Method GET
-    return ($remediationScripts.value | ConvertTo-Json -Depth 100) | ConvertFrom-Json
+
+    # Get also assignments and schedules
+    foreach ($remediationScript in $remediationScripts.value) {
+        $assignments = Invoke-MGGraphRequest -Uri "$graphUrl/deviceManagement/deviceHealthScripts/$($remediationScript.id)/assignments" -Method GET
+        $propertiesToRemoveFromAssignments = 'id', '@odata.context', "target.'@odata.type'"
+        $remediationScript.assignments = $assignments.value | Select-Object -Property * -ExcludeProperty $propertiesToRemoveFromAssignments
+    # $remediationScript.schedules = Invoke-MGGraphRequest -Uri "$graphUrl/deviceManagement/deviceHealthScripts/$($remediationScript.id)/schedules" -Method GET
+    }
+
+    # Exclude specified properties
+    $propertiesToRemove = 'detectionScriptParameters', 'isGlobalScript', 'version', 'roleScopeTagIds', 'remediationScriptContent', 'remediationScriptParameters', 'detectionScriptContent', 'highestAvailableVersion'
+    $filteredScripts = $remediationScripts.value | Select-Object -Property * -ExcludeProperty $propertiesToRemove
+
+    return ($filteredScripts | ConvertTo-Json -Depth 100) | ConvertFrom-Json
 }
 
-function Invoke-HealthscriptUpload {
+function Get-IntuneRemediationScriptContent{
     param(
-        [string]$DisplayName,
-        [string]$Description,
-        [string]$Publisher,
-        [string]$RunAs,
-        [string]$RunAs32,
-        [string]$ScheduleType,
-        [string]$ScheduleFrequency,
-        [string]$StartTime,
-        [string]$Groupid,
-        [string]$DetectionScriptContent,
-        [string]$RemediationScriptContent,
-        [string]$EnforceSignatureCheck
+        [string]$id,
+        [string]$folderPath
     )
-
-    $url = "https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts"
-    $detectionbase64encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($DetectionScriptContent))
-    $remediationbase64encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($RemediationScriptContent))
-
-    $json = @"
-    {
-        "description": "$Description",
-        "detectionScriptContent": "$detectionbase64encoded",
-        "displayName": "$DisplayName",
-        "enforceSignatureCheck": $EnforceSignatureCheck,
-        "publisher": "$Publisher",
-        "remediationScriptContent": "$remediationbase64encoded",
-        "roleScopeTagIds": [
-            "0"
-        ],
-        "runAs32Bit": $RunAs32,
-        "runAsAccount": "$RunAs"
+    $remediationScript = Invoke-MGGraphRequest -Uri "$graphUrl/deviceManagement/deviceHealthScripts/$id" -Method GET
+    if (($remediationScript.detectionScriptContent).Length -ne 0) {
+        [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($($remediationScript.detectionScriptContent))) | Out-File -Encoding ASCII -FilePath $(Join-Path $folderPath "DetectionScript.ps1")
     }
-"@
-    $addscript = Invoke-MgGraphRequest -Uri $url -Method Post -Body $json -ContentType "application/json" -OutputType PSObject
-    $scriptid = $addscript.id
-
-    if($ScheduleType -eq "Daily"){
-        $Schedule = @"
-        "runSchedule": {
-            "@odata.type": "#microsoft.graph.deviceHealthScriptDailySchedule",
-            "interval": $scheduleFrequency,
-            "time": "$startTime",
-            "useUtc": false
-        },
-"@
-    }else{
-        $Schedule = @"
-        "runSchedule": {
-            "@odata.type": "#microsoft.graph.deviceHealthScriptHourlySchedule",
-            "interval": $interval
-        },
-"@
+    if (($remediationScript.remediationScriptContent).Length -ne 0) {
+        [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($($remediationScript.remediationScriptContent))) | Out-File -Encoding ASCII -FilePath $(Join-Path $folderPath "RemediationScript.ps1")
     }
-    $assignurl = "https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts/$scriptid/assign"
-    $assignjson = @"
-    {
-        "deviceHealthScriptAssignments": [
-            {
-                "runRemediationScript": true,
-                $schedule
-                "target": {
-                    "@odata.type": "#microsoft.graph.groupAssignmentTarget",
-                    "groupId": "$groupid"
-                }
-            }
-        ]
-    }
-"@
-    Invoke-MgGraphRequest -Uri $assignurl -Method Post -Body $assignjson -ContentType "application/json" -OutputType PSObject
-
+    Write-Host "Intune script '$($remediationScript.displayName)' content downloaded."
+    Write-Host "Path: $folderPath"
 }
+
 
 ###############################################################################################################
 # Main ########################################################################################################
@@ -129,22 +86,44 @@ $scripts = Get-IntuneRemediationScripts
 
 # Get all scripts in folder
 $folders = Get-ChildItem -Path .\remediation-scripts -Directory
-Write-Host $folders.Name
 
-# Check for each folder name if there is an $script.displayName available
-foreach ($folder in $folders) {
-    $script = $scripts | Where-Object { $_.displayName -eq $folder.Name }
-    if ($script -eq $null) {
-        Write-Host "Script not found in Intune: $folder.Name"
-        #Read Yaml
-        $yaml = Get-Content -Path "$folder\definition.yaml" -Raw | ConvertFrom-Yaml
-        Write-Host $yaml
-        #Upload Script
-        #Invoke-HealthscriptUpload -DisplayName $yaml.displayName -Description $yaml.description -Publisher $yaml.publisher -RunAs $yaml.runAs -RunAs32 $yaml.runAs32 -ScheduleType $yaml.scheduleType -ScheduleFrequency $yaml.scheduleFrequency -StartTime $yaml.startTime -Groupid $yaml.groupid -DetectionScriptContent (Get-Content -Path ".\remediation-scripts\$folder\detection.ps1" -Raw) -RemediationScriptContent (Get-Content -Path ".\remediation-scripts\$folder\remediation.ps1" -Raw) -EnforceSignatureCheck $yaml.enforceSignatureCheck
-    }else{
-        Write-Host "Script found in Intune: $folder.Name"
-        #Compare Yaml with Intune
-        $yaml = Get-Content -Path "$folder\definition.yaml" -Raw | ConvertFrom-Yaml
-        #......
+
+# Compare Intune script names with folder names
+foreach ($script in $scripts) {
+    $scriptName = $script.displayName
+    $folderMatch = $folders | Where-Object { $_.Name -eq $scriptName }
+
+    if ($folderMatch) {
+        Write-Host "Intune script '$scriptName' has a corresponding folder."
+    } else {
+        Write-Host "Intune script '$scriptName' does not have a corresponding folder."
+        New-Item -Path .\remediation-scripts -Name $scriptName -ItemType Directory
+        Write-Host "Intune script '$scriptName' does not have a corresponding folder. Folder created."
+        Get-IntuneRemediationScriptContent -id $script.id -folderPath $(Join-Path .\remediation-scripts $scriptName)
+        $script | ConvertTo-Yaml | Out-File -Encoding ASCII -FilePath $(Join-Path .\remediation-scripts $scriptName\script.yaml)
     }
 }
+
+# Compare folder names with Intune script names
+foreach ($folder in $folders) {
+    $folderName = $folder.Name
+    $scriptMatch = $scripts | Where-Object { $_.displayName -eq $folderName }
+
+    if ($scriptMatch) {
+        Write-Host "Folder '$folderName' has a corresponding Intune script."
+        # CHeck if yaml file exists
+        $yamlFile = Get-ChildItem -Path $folder.FullName -Filter "script.yaml"
+        if ($yamlFile) {
+            Write-Host "Folder '$folderName' have a corresponding yaml file."
+            $yamlScript = Get-Content -Path $yamlFile.FullName | ConvertFrom-Yaml
+            # TODO: Comapre scripts
+
+        }else{
+            Write-Host "Folder '$folderName' does not have a corresponding yaml file."
+            $scriptMatch | ConvertTo-Yaml | Out-File -Encoding ASCII -FilePath $(Join-Path $folder.FullName "script.yaml")
+        }
+    } else {
+        Write-Host "Folder '$folderName' does not have a corresponding Intune script."
+    }
+}
+
