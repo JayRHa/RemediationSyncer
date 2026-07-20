@@ -1,68 +1,20 @@
-<!-- unified-readme:start -->
+<!-- jr-brand:start -->
 <div align="center">
-
-# Remediation Syncer
-
-**Keep your Intune Proactive Remediations in Git -- bidirectional.**
-
-Sync. Version. Deploy.
-
-[![GitHub stars](https://img.shields.io/github/stars/JayRHa/RemediationSyncer?style=for-the-badge&logo=github&color=f4c542)](https://github.com/JayRHa/RemediationSyncer/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/JayRHa/RemediationSyncer?style=for-the-badge&logo=github&color=4078c0)](https://github.com/JayRHa/RemediationSyncer/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/JayRHa/RemediationSyncer?style=for-the-badge&logo=github&color=d73a4a)](https://github.com/JayRHa/RemediationSyncer/issues)
-[![Contributors](https://img.shields.io/github/contributors/JayRHa/RemediationSyncer?style=for-the-badge&logo=github&color=28a745)](https://github.com/JayRHa/RemediationSyncer/graphs/contributors)
-
-Remediation Syncer is a PowerShell-based tool that synchronizes Microsoft Intune Remediation Scripts (Proactive Remediations) with a local Git repository. It supports two modes: **Export** (Intune to Git) and **Import** (Git to Intune), giving you full version control over your remediation scripts.
-
-<p>
-  <a href="https://jannikreinhard.com/">Blog</a> ·
-  <a href="https://www.linkedin.com/in/jannik-r/">LinkedIn</a> ·
-  <a href="https://x.com/jannik_reinhard">X</a>
+  <a href="https://jannikreinhard.com/">
+    <img src="https://raw.githubusercontent.com/JayRHa/.github/main/assets/readme/tool.svg" alt="Jannik Reinhard — AI, Cloud and Endpoint Management" width="100%">
+  </a>
+  <h1>Remediation Syncer</h1>
+  <p><strong>Synchronizes Microsoft Intune Proactive Remediation scripts between repositories and environments.</strong></p>
+  <p>
+  <a href="https://jannikreinhard.com/"><img src="https://img.shields.io/badge/Website-0A5FC0?style=flat-square&amp;logo=wordpress&amp;logoColor=white" alt="Website"></a>
+  <a href="https://github.com/JayRHa"><img src="https://img.shields.io/badge/GitHub-081427?style=flat-square&amp;logo=github&amp;logoColor=white" alt="GitHub"></a>
+  <a href="https://www.linkedin.com/in/jannik-r/"><img src="https://img.shields.io/badge/LinkedIn-0795FF?style=flat-square&amp;logo=linkedin&amp;logoColor=white" alt="LinkedIn"></a>
+  <a href="https://x.com/jannik_reinhard"><img src="https://img.shields.io/badge/X-081427?style=flat-square&amp;logo=x&amp;logoColor=white" alt="X"></a>
+  <a href="https://www.youtube.com/@ModernDevMgmt/featured"><img src="https://img.shields.io/badge/YouTube-0A5FC0?style=flat-square&amp;logo=youtube&amp;logoColor=white" alt="YouTube"></a>
 </p>
-
----
-
-`Endpoint Management` | `PowerShell` | `Public` | `Maintained`
-
+  <p><sub>Tool · App · CLI · PowerShell · Practical by design</sub></p>
 </div>
-
-## What is this?
-
-Remediation Syncer supports Microsoft Intune and endpoint management workflows such as automation, troubleshooting, remediation, deployment, or reporting.
-
-## Project Context
-
-- Use it when Intune work should be scripted, packaged, synchronized, or made easier to repeat.
-- Most workflows start from repository assets, then move through Microsoft Graph, Intune, or device-side execution.
-- This repository is maintained as a practical project and reference asset.
-
-## How It Works
-
-The repository stores scripts or tooling, administrators configure or run them, Intune and Microsoft Graph apply the work, and endpoint results feed back into reports or follow-up actions.
-
-```mermaid
-flowchart LR
-    Repo[Repository assets] --> Admin[Administrator workflow]
-    Admin --> Graph[Microsoft Graph or Intune]
-    Graph --> Device[Managed endpoint]
-    Device --> Result[Detection, remediation, or report]
-    Result --> Review[Review and iterate]
-    Review --> Repo
-```
-
-## Quick Start
-
-1. Review the project context and workflow below.
-2. Clone the repository:
-
-   ```bash
-   git clone https://github.com/JayRHa/RemediationSyncer.git
-   ```
-
-3. Continue with the setup, usage, or workflow sections below.
-
----
-<!-- unified-readme:end -->
+<!-- jr-brand:end -->
 
 ## Table of Contents
 
@@ -82,8 +34,6 @@ flowchart LR
 - [Contributing](#contributing)
 - [License](#license)
 
----
-
 ## Overview
 
 - **Export** all Proactive Remediation scripts from Intune into a Git-friendly folder structure
@@ -94,8 +44,6 @@ flowchart LR
 - Skips built-in Microsoft global scripts during export
 - Warns about orphaned local folders that no longer exist in Intune
 - Tenant ID passed as parameter -- no hardcoded values
-
----
 
 ## Architecture
 
@@ -128,8 +76,6 @@ flowchart LR
                                            +------------------------+
 ```
 
----
-
 ## Repository Structure
 
 ```
@@ -152,8 +98,6 @@ RemediationSyncer/
 
 Each remediation script in Intune maps to a folder under `remediation-scripts/`. The folder name corresponds to the `displayName` from the YAML metadata.
 
----
-
 ## Prerequisites
 
 | Requirement | Details |
@@ -169,8 +113,6 @@ Each remediation script in Intune maps to a folder under `remediation-scripts/`.
 | `DeviceManagementConfiguration.ReadWrite.All` | Export + Import | Delegated or Application |
 
 > For export-only usage, `DeviceManagementConfiguration.Read.All` is sufficient.
-
----
 
 ## Setup
 
@@ -189,8 +131,6 @@ Install-Module -Name powershell-yaml -Scope CurrentUser -Force
 ```
 
 That's it. The script handles Graph authentication via `Connect-MgGraph` with your tenant ID as a parameter.
-
----
 
 ## Usage
 
@@ -259,8 +199,6 @@ By default the script uses `.\remediation-scripts`. You can override this:
 .\.pipeline\remediation_syncer.ps1 -Mode Export -TenantId "your-tenant-id" -ScriptsPath "C:\MyScripts"
 ```
 
----
-
 ## Parameters
 
 | Parameter | Required | Default | Description |
@@ -269,8 +207,6 @@ By default the script uses `.\remediation-scripts`. You can override this:
 | `-TenantId` | Yes | -- | Azure AD tenant ID for authentication |
 | `-ScriptsPath` | No | `.\remediation-scripts` | Local folder path for script storage |
 | `-WhatIf` | No | `$false` | Import only: preview changes without modifying Intune |
-
----
 
 ## Script YAML Schema
 
@@ -313,8 +249,6 @@ assignments:
 | `assignments[].runRemediationScript` | boolean | `true` = run detection + remediation, `false` = detection only. |
 | `assignments[].runSchedule` | object | Schedule type: `deviceHealthScriptDailySchedule` or `deviceHealthScriptHourlySchedule`. |
 
----
-
 ## How the Sync Works
 
 ### Export Mode
@@ -345,8 +279,6 @@ For each folder in remediation-scripts/:
        +-- MATCH     -> PATCH to update existing script
     6. Apply assignments from script.yaml (if defined)
 ```
-
----
 
 ## CI/CD Integration
 
@@ -412,8 +344,6 @@ jobs:
 
 > **Note:** For non-interactive CI/CD authentication, configure a service principal or managed identity with `Connect-MgGraph` using certificate or client secret auth.
 
----
-
 ## Contributing
 
 Contributions are welcome. To get started:
@@ -429,10 +359,20 @@ Please keep in mind:
 - Test with both PowerShell 5.1 and PowerShell 7+ where possible
 - Do not commit real tenant IDs, secrets, or credentials
 
----
-
 ## License
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 Copyright (c) 2024 Jannik Reinhard
+
+<!-- jr-brand-footer:start -->
+
+---
+
+<div align="center">
+  <p><sub>Built and maintained by <a href="https://jannikreinhard.com/">Jannik Reinhard</a> · Microsoft MVP for Security and AI Platform.</sub></p>
+  <p><a href="https://www.buymeacoffee.com/jannikreinf">Support the open-source work</a></p>
+  <p><strong>Stay healthy, Cheers Jannik</strong></p>
+</div>
+
+<!-- jr-brand-footer:end -->
